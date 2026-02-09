@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "calendar.js",
+  "type": "module",
   "scripts": {},
   "keywords": [],
   "author": "",
@@ -14,6 +15,8 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.58.1",
-    "@types/node": "^25.2.0"
+    "@types/node": "^25.2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }
