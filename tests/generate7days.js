@@ -3,6 +3,11 @@ import path from "path";
 import fs from "fs";
 import { generateWeekCalendar } from "./calendar.spec.ts";
 
+// const { chromium } = require("playwright");
+// // import path from "path";
+// // import fs from "fs";
+// const { generateWeekCalendar } = require("./calendar.spec.ts");
+
 const startDate = process.argv[2];
 if (!startDate) {
   console.log("Usage: npx ts-node tests/generate7days.ts YYYY-MM-DD");

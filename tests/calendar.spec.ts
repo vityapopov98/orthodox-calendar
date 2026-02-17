@@ -5,33 +5,32 @@ import fs from "fs";
 
 async function getCleanText(
   input: Locator | Locator[] | string | string[],
-  capitalize = false
+  capitalize = false,
 ): Promise<string> {
   let arr: string[] = [];
 
   if (Array.isArray(input)) {
- 
     for (const item of input) {
       if (typeof item === "string") arr.push(item);
       else arr.push((await item.allInnerTexts()).join(" "));
     }
   } else {
-
     if (typeof input === "string") arr = [input];
     else arr = [(await input.allInnerTexts()).join(" ")];
   }
 
   let text = arr
-    .map(s => s.replace(/\n/g, " ").trim())
+    .map((s) => s.replace(/\n/g, " ").trim())
     .filter(Boolean)
     .join(" ")
     .replace(/\s+/g, " ");
 
-
   if (capitalize) {
     text = text
       .split(" ")
-      .map(word => (word ? word[0].toUpperCase() + word.slice(1).toLowerCase() : ""))
+      .map((word) =>
+        word ? word[0].toUpperCase() + word.slice(1).toLowerCase() : "",
+      )
       .join(" ");
   }
 
@@ -41,16 +40,19 @@ async function getCleanText(
 function generateCalendarHTML({
   day,
   newDay,
+  weekName,
+  dayDescription,
   oldDay,
   readings,
 }: {
   day: string;
   newDay: string;
+  weekName: string;
+  dayDescription: string;
   oldDay: string;
   readings: string;
 }): string {
-  return `
-<style>
+  return `<style>
   @font-face {
     font-family: "Roboto Slab";
     src: url("/public/RobotoSlab-VariableFont_wght.ttf") format("truetype");
@@ -127,17 +129,17 @@ function generateCalendarHTML({
     padding-bottom: 8px;
   }
   .calendar-style.new {
-    background-color: #e0e0e0;
+    background-color: #f5f5f5;
   }
   .calendar-style.old {
-    background-color: #e0e0e0;
+    background-color: #f5f5f5;
   }
   .calendar-style p {
     font-size: 36px;
     color: #000;
   }
   .calendar-readings {
-    background-color: #e0e0e0;
+    background-color: #f5f5f5;
     border-radius: 12px;
     padding: 25px 30px;
     box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.03);
@@ -203,6 +205,9 @@ function generateCalendarHTML({
   <h2 class="calendar-day">
     <span class="weekday">${day}, ${newDay}</span>
   </h2>
+  <h3 style="font-size: 48px">${dayDescription}</h3>
+
+  <h3 style="font-size: 48px">${weekName}</h3>
 
   <div class="calendar-styles-readings-container">
     <div class="calendar-style new" style="flex: 1">
@@ -564,22 +569,21 @@ function generateCalendarHTML({
     </table>
   </div>
 </div>
-
-
-  `;
+`;
 }
 
 test("has title", async ({ page }) => {
-  await page.goto("https://azbyka.ru/days/2026-02-23", { waitUntil: 'networkidle' });
-
+  await page.goto("https://azbyka.ru/days/2026-02-23", {
+    waitUntil: "networkidle",
+  });
 
   const calendar = page.locator("#calendar_day");
   const day = calendar.locator(".days.mob-hide");
   const newDay = calendar.locator(".newstyle");
   const oldDay = calendar.locator(".oldstyle");
-  const chtenia = page.locator("#chteniya")
-  const readings = chtenia.locator(".readings-text").locator("a.bibref")
-  
+  const chtenia = page.locator("#chteniya");
+  const readings = chtenia.locator(".readings-text").locator("a.bibref");
+
   await expect(day).toBeVisible();
   await expect(newDay).toBeVisible();
   await expect(oldDay).toBeVisible();
@@ -589,11 +593,11 @@ test("has title", async ({ page }) => {
   let NewDay = await getCleanText(newDay, true);
   let OldDay = await getCleanText(oldDay, true);
 
-  NewDay = NewDay.replace(/^Новый стиль\s*/i, '');
-  OldDay = OldDay.replace(/^Старый стиль\s*/i, '');
+  NewDay = NewDay.replace(/^Новый стиль\s*/i, "");
+  OldDay = OldDay.replace(/^Старый стиль\s*/i, "");
 
   const Readings = await getCleanText(readings, false);
-  
+
   const html = generateCalendarHTML({
     day: Day,
     newDay: NewDay,
@@ -605,7 +609,11 @@ test("has title", async ({ page }) => {
 
   await page.setContent(html);
   const calendarLocator = page.locator(".calendar");
-  await calendarLocator.screenshot({ path: "calendar.png", width: 2480, height: 3508 });
+  await calendarLocator.screenshot({
+    path: "calendar.png",
+    width: 2480,
+    height: 3508,
+  });
 
   await expect(day).toBeVisible();
   await expect(newDay).toBeVisible();
@@ -615,11 +623,12 @@ test("has title", async ({ page }) => {
   console.log("Новый стиль:", NewDay);
   console.log("Старый стиль:", OldDay);
   console.log("Чтения дня:", Readings);
- 
-  
+
   // Expect a title "to contain" a substring.
- 
-  
+});
+
+test("Создать календарь на 7 дней", async ({ page }) => {
+  await generateWeekCalendar(page, "2026-02-17");
 });
 
 // npx playwright codegen --ignore-https-errors https://azbyka.ru/days/2026-02-23
@@ -644,7 +653,7 @@ test("has title", async ({ page }) => {
  */
 export async function generateWeekCalendar(page, startDate: string) {
   // Ensure output directory exists
-  const outputDir = path.join(__dirname, "output_calendar");
+  const outputDir = path.join(process.cwd(), "output_calendar");
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
@@ -653,30 +662,40 @@ export async function generateWeekCalendar(page, startDate: string) {
   for (let i = 0; i < 7; i++) {
     // Format date as YYYY-MM-DD
     const yyyy = currentDate.getFullYear();
-    const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
-    const dd = String(currentDate.getDate()).padStart(2, '0');
+    const mm = String(currentDate.getMonth() + 1).padStart(2, "0");
+    const dd = String(currentDate.getDate()).padStart(2, "0");
     const dateStr = `${yyyy}-${mm}-${dd}`;
 
-    await page.goto(`https://azbyka.ru/days/${dateStr}`, { waitUntil: 'networkidle' });
+    await page.goto(`https://azbyka.ru/days/${dateStr}`, {
+      waitUntil: "networkidle",
+    });
+
+    // dayinfo_color
 
     const calendar = page.locator("#calendar_day");
     const day = calendar.locator(".days.mob-hide");
+    const weekName = page.locator(".day__post-wp.dayinfo_color");
+    const dayDescription = page.locator(".text.day__text").locator("p");
     const newDay = calendar.locator(".newstyle");
     const oldDay = calendar.locator(".oldstyle");
-    const chtenia = page.locator("#chteniya")
-    const readings = chtenia.locator(".readings-text").locator("a.bibref")
+    const chtenia = page.locator("#chteniya");
+    const readings = chtenia.locator(".readings-text").locator("a.bibref");
 
     const Day = await getCleanText(day, true);
     let NewDay = await getCleanText(newDay, true);
     let OldDay = await getCleanText(oldDay, true);
+    const weekNameText = await getCleanText(weekName, true);
+    const dayDescriptionText = await getCleanText(dayDescription, true);
 
-    NewDay = NewDay.replace(/^Новый стиль\s*/i, '');
-    OldDay = OldDay.replace(/^Старый стиль\s*/i, '');
+    NewDay = NewDay.replace(/^Новый стиль\s*/i, "");
+    OldDay = OldDay.replace(/^Старый стиль\s*/i, "");
 
     const Readings = await getCleanText(readings, false);
 
     const html = generateCalendarHTML({
       day: Day,
+      weekName: weekNameText,
+      dayDescription: dayDescriptionText,
       newDay: NewDay,
       oldDay: OldDay,
       readings: Readings,
@@ -688,7 +707,11 @@ export async function generateWeekCalendar(page, startDate: string) {
     await page.waitForTimeout(200); // 200ms задержка для рендеринга
     const filePath = path.join(outputDir, `${dateStr}.png`);
     console.log(`Saving screenshot to: ${filePath}`);
-    await calendarLocator.screenshot({ path: filePath, width: 2480, height: 3508 });
+    await calendarLocator.screenshot({
+      path: filePath,
+      width: 2480,
+      height: 3508,
+    });
 
     // Следующий день
     currentDate.setDate(currentDate.getDate() + 1);
